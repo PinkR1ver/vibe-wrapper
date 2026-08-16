@@ -44,23 +44,23 @@ async function inspectOpenCode({ root, range } = {}) {
     };
   }
 
-  const allPrompts = readOpenCodePrompts(dbPath);
+  const { prompts: allPrompts, readable } = readOpenCodePrompts(dbPath);
   const prompts = allPrompts.filter((p) => isInRange(p.timestamp, range));
   const tokenTotals = readOpenCodeTokenTotals(dbPath, range);
 
   return {
     source: "opencode",
     root: dbPath,
-    files_scanned: allPrompts.length > 0 ? 1 : 0,
+    files_scanned: readable ? 1 : 0,
     prompt_count: prompts.length,
     token_totals: tokenTotals,
     prompts,
-    notes: buildNotes(allPrompts),
+    notes: buildNotes(readable),
   };
 }
 
-function buildNotes(allPrompts) {
-  if (allPrompts.length > 0) return [];
+function buildNotes(readable) {
+  if (readable) return [];
   return [
     "No readable OpenCode messages found. Install sqlite3 or pass --opencode-root to a readable opencode.db.",
   ];
@@ -94,22 +94,31 @@ function readOpenCodePrompts(dbPath) {
 
   const rows = readSqliteRows(dbPath, sql);
 
+  // A null result means sqlite3 failed (missing CLI, unreadable DB, timeout, or
+  // output larger than maxBuffer) rather than an empty result set.
+  if (rows === null) {
+    return { prompts: [], readable: false };
+  }
+
   // Re-sort ascending for chronological prompt order.
-  return rows
-    .map((row) => ({
-      source: "opencode",
-      timestamp: toIsoTimestamp(row.time_created),
-      session_file: `opencode:${row.session_slug}`,
-      text: normalizeWhitespace(row.text),
-    }))
-    .reverse();
+  return {
+    prompts: rows
+      .map((row) => ({
+        source: "opencode",
+        timestamp: toIsoTimestamp(row.time_created),
+        session_file: `opencode:${row.session_slug}`,
+        text: normalizeWhitespace(row.text),
+      }))
+      .reverse(),
+    readable: true,
+  };
 }
 
 function readOpenCodeTokenTotals(dbPath, range) {
   const { fromMs, toMs } = range || {};
   const clauses = ["time_archived IS NULL"];
-  if (fromMs != null) clauses.push(`time_created >= ${fromMs}`);
-  if (toMs != null) clauses.push(`time_created <= ${toMs}`);
+  if (Number.isFinite(fromMs)) clauses.push(`time_created >= ${fromMs}`);
+  if (Number.isFinite(toMs)) clauses.push(`time_created <= ${toMs}`);
 
   const sql = `
     SELECT
@@ -127,7 +136,7 @@ function readOpenCodeTokenTotals(dbPath, range) {
   const rows = readSqliteRows(dbPath, sql);
   const totals = emptyTotals();
 
-  for (const row of rows) {
+  for (const row of rows || []) {
     totals.input_tokens += number(row.tokens_input);
     totals.cached_input_tokens += number(row.tokens_cache_read);
     totals.cache_creation_input_tokens += number(row.tokens_cache_write);
@@ -159,7 +168,7 @@ function readSqliteRows(dbPath, sql) {
     const parsed = JSON.parse(out || "[]");
     return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return [];
+    return null;
   }
 }
 
