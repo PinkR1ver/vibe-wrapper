@@ -283,10 +283,11 @@ Vibe Roaster 检查它能找到的数据源，并将缺失的根目录视为空�
 | Copilot Chat | `copilot` | VS Code/Cursor globalStorage |
 | Amazon Q | `amazonq` | `~/.aws/amazonq/history` |
 | Antigravity | `antigravity` | `~/.gemini/antigravity(-ide)/conversations` |
+| OpenCode | `opencode` | `~/.local/share/opencode/opencode.db` |
 | TokenTracker（内置） | 仅活跃度 | `~/.tokentracker/tracker/queue.jsonl` |
 | Vibe tracker | `vibe-tracker` | `~/.vibe-roast/sessions.jsonl` |
 
-Cursor 解析依赖本地的 `sqlite3` 命令。加密或二进制的历史记录会被跳过。
+Cursor 和 OpenCode 的解析依赖本地的 `sqlite3` 命令。加密或二进制的历史记录会被跳过。
 
 <details>
 <summary><strong>已知的数据源限制</strong></summary>
@@ -334,6 +335,7 @@ npx vibe-roast inspect \
 --copilot-root
 --amazonq-root
 --antigravity-root
+--opencode-root
 --token-tracker-queue
 ```
 

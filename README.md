@@ -299,10 +299,11 @@ Vibe Roaster inspects the sources it can find and treats missing roots as empty.
 | Copilot Chat | `copilot` | VS Code/Cursor global storage |
 | Amazon Q | `amazonq` | `~/.aws/amazonq/history` |
 | Antigravity | `antigravity` | `~/.gemini/antigravity(-ide)/conversations` |
+| OpenCode | `opencode` | `~/.local/share/opencode/opencode.db` |
 | TokenTracker (bundled) | activity only | `~/.tokentracker/tracker/queue.jsonl` |
 | Vibe tracker | `vibe-tracker` | `~/.vibe-roast/sessions.jsonl` |
 
-Cursor is best-effort and requires the local `sqlite3` command. Encrypted or binary histories are skipped.
+Cursor and OpenCode are best-effort and require the local `sqlite3` command. Encrypted or binary histories are skipped.
 
 <details>
 <summary><strong>Known source limitations</strong></summary>
@@ -350,6 +351,7 @@ Additional overrides:
 --copilot-root
 --amazonq-root
 --antigravity-root
+--opencode-root
 --token-tracker-queue
 ```
 
