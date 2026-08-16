@@ -1,6 +1,6 @@
 # Feature Specs
 
-Last synchronized: 2026-07-27
+Last synchronized: 2026-08-16
 
 ## Current product line
 

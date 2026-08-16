@@ -1,6 +1,6 @@
 # Data sources and limitations
 
-Last updated: 2026-08-05
+Last updated: 2026-08-16
 
 ## Normalized source contract
 
