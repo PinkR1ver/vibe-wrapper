@@ -11,7 +11,10 @@ import {
   filterUsageRows,
   filterUsageRowsBySource,
 } from "../lib/usage-analytics.js";
-import { buildVibeCloudWords, filterWordCloudRecords } from "../lib/vibe-cloud.js";
+import {
+  buildVibeCloudWords,
+  filterWordCloudRecords,
+} from "../lib/vibe-cloud.js";
 
 const PERIODS = ["day", "week", "month", "total", "custom"];
 const SOURCE_COLORS = {
@@ -19,17 +22,29 @@ const SOURCE_COLORS = {
   codex: "#3b82f6",
   claude: "#df7854",
   opencode: "#8b5cf6",
+  dsh: "#4d6bfe",
   gemini: "#22d3ee",
   copilot: "#facc15",
 };
 const FALLBACK_COLORS = ["#f59e0b", "#ec4899", "#14b8a6", "#6366f1"];
 const CLOUD_COLORS = [
-  "#ff5a1f", "#f0c14a", "#e07a3a", "#c45c26", "#8b5a2b",
-  "#23d6a5", "#5b8cff", "#6b6560", "#d97706", "#b45309",
+  "#ff5a1f",
+  "#f0c14a",
+  "#e07a3a",
+  "#c45c26",
+  "#8b5a2b",
+  "#23d6a5",
+  "#5b8cff",
+  "#6b6560",
+  "#d97706",
+  "#b45309",
 ];
 
 function sourceColor(source, index = 0) {
-  return SOURCE_COLORS[normalizeAgentId(source)] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  return (
+    SOURCE_COLORS[normalizeAgentId(source)] ||
+    FALLBACK_COLORS[index % FALLBACK_COLORS.length]
+  );
 }
 
 function compactNumber(value) {
@@ -43,7 +58,13 @@ function compactNumber(value) {
 function periodLabel(period, zh) {
   const labels = zh
     ? { day: "日", week: "周", month: "月", total: "全部", custom: "自定义" }
-    : { day: "Day", week: "Week", month: "Month", total: "Total", custom: "Custom" };
+    : {
+        day: "Day",
+        week: "Week",
+        month: "Month",
+        total: "Total",
+        custom: "Custom",
+      };
   return labels[period];
 }
 
@@ -51,7 +72,9 @@ function AnimatedCompactNumber({ value }) {
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (reduced) {
       setDisplay(value);
       return undefined;
@@ -85,32 +108,57 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
     () => filterUsageRows(allRows, period, custom),
     [allRows, period, custom],
   );
-  const overviewAll = useMemo(() => buildUsageOverview(filteredRows), [filteredRows]);
-  const lifetimeOverview = useMemo(() => buildUsageOverview(allRows), [allRows]);
+  const overviewAll = useMemo(
+    () => buildUsageOverview(filteredRows),
+    [filteredRows],
+  );
+  const lifetimeOverview = useMemo(
+    () => buildUsageOverview(allRows),
+    [allRows],
+  );
   const visibleRows = useMemo(
     () => filterUsageRowsBySource(filteredRows, source),
     [filteredRows, source],
   );
-  const overview = useMemo(() => buildUsageOverview(visibleRows), [visibleRows]);
+  const overview = useMemo(
+    () => buildUsageOverview(visibleRows),
+    [visibleRows],
+  );
   const trend = useMemo(() => buildUsageTrend(visibleRows), [visibleRows]);
   const visibleWordRecords = useMemo(
-    () => filterWordCloudRecords(wordCloudRecords, filteredRows, period, custom, source),
+    () =>
+      filterWordCloudRecords(
+        wordCloudRecords,
+        filteredRows,
+        period,
+        custom,
+        source,
+      ),
     [wordCloudRecords, filteredRows, period, custom, source],
   );
   const domainWeights = useMemo(
-    () => Object.fromEntries(
-      buildVibeCloudWords(wordCloudRecords, { locale, limit: 500 })
-        .filter((word) => word.kind === "domain")
-        .map((word) => [word.key, word.weight]),
-    ),
+    () =>
+      Object.fromEntries(
+        buildVibeCloudWords(wordCloudRecords, { locale, limit: 500 })
+          .filter((word) => word.kind === "domain")
+          .map((word) => [word.key, word.weight]),
+      ),
     [wordCloudRecords, locale],
   );
   const cloudWords = useMemo(
-    () => buildVibeCloudWords(visibleWordRecords, { locale, limit: 36, domainWeights }),
+    () =>
+      buildVibeCloudWords(visibleWordRecords, {
+        locale,
+        limit: 36,
+        domainWeights,
+      }),
     [visibleWordRecords, locale, domainWeights],
   );
-  const estimatedCost = Number(activity?.estimated_cost_usd || 0)
-    * (lifetimeOverview.totalTokens > 0 ? overview.totalTokens / lifetimeOverview.totalTokens : 0);
+  const estimatedCost =
+    Number(activity?.estimated_cost_usd || 0) *
+    (lifetimeOverview.totalTokens > 0
+      ? overview.totalTokens / lifetimeOverview.totalTokens
+      : 0);
   const modelUsage = useMemo(
     () => buildModelUsage(visibleRows, { estimatedCostUsd: estimatedCost }),
     [visibleRows, estimatedCost],
@@ -119,16 +167,21 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
     () => buildContextBreakdowns(visibleRows),
     [visibleRows],
   );
-  const contextBreakdown = source === "codex" || source === "claude"
-    ? contextBreakdowns.find((item) => item.source === source)
-    : null;
+  const contextBreakdown =
+    source === "codex" || source === "claude"
+      ? contextBreakdowns.find((item) => item.source === source)
+      : null;
   const sourceOptions = overviewAll.sources;
 
   return (
     <div className="space-y-4">
       <section className="motion-reveal motion-surface rounded-[18px] border border-black/[0.06] bg-[#fffcf7] p-5 shadow-[0_10px_30px_rgba(40,28,12,0.06)] dark:border-white/[0.08]">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label={t("usage.period")}>
+          <div
+            className="flex flex-wrap items-center gap-1"
+            role="tablist"
+            aria-label={t("usage.period")}
+          >
             {PERIODS.map((key) => (
               <button
                 key={key}
@@ -155,7 +208,9 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
           >
             <option value="all">{t("usage.allAgents")}</option>
             {sourceOptions.map((item) => (
-              <option key={item.source} value={item.source}>{agentLabel(item.source)}</option>
+              <option key={item.source} value={item.source}>
+                {agentLabel(item.source)}
+              </option>
             ))}
           </select>
         </div>
@@ -165,15 +220,24 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
             <input
               type="date"
               value={custom.from}
-              onChange={(event) => setCustom((current) => ({ ...current, from: event.target.value }))}
+              onChange={(event) =>
+                setCustom((current) => ({
+                  ...current,
+                  from: event.target.value,
+                }))
+              }
               className="rounded-lg border border-black/[0.1] bg-transparent px-2 py-1.5 text-xs dark:border-white/[0.12]"
               aria-label={t("usage.from")}
             />
-            <span className="self-center text-xs text-[#8b8680] dark:text-[#8f8f8f]">→</span>
+            <span className="self-center text-xs text-[#8b8680] dark:text-[#8f8f8f]">
+              →
+            </span>
             <input
               type="date"
               value={custom.to}
-              onChange={(event) => setCustom((current) => ({ ...current, to: event.target.value }))}
+              onChange={(event) =>
+                setCustom((current) => ({ ...current, to: event.target.value }))
+              }
               className="rounded-lg border border-black/[0.1] bg-transparent px-2 py-1.5 text-xs dark:border-white/[0.12]"
               aria-label={t("usage.to")}
             />
@@ -182,7 +246,9 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
 
         <div className="py-7 text-center">
           <div className="text-xs font-medium uppercase tracking-[0.08em] text-[#6b6560] dark:text-[#b0b0b0]">
-            {activity?.metric === "tokens" ? t("profile.stat.totalTokens") : t("profile.stat.totalPrompts")}
+            {activity?.metric === "tokens"
+              ? t("profile.stat.totalTokens")
+              : t("profile.stat.totalPrompts")}
           </div>
           <div className="mt-2 font-[JetBrains_Mono,ui-monospace,monospace] text-[58px] font-bold leading-none tracking-[-0.05em]">
             <AnimatedCompactNumber value={overview.totalTokens} />
@@ -193,14 +259,21 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
                 {t("profile.stat.estCost")}
               </span>
               <span className="text-xl font-bold text-emerald-500">
-                ${estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                $
+                {estimatedCost.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
             </div>
           )}
         </div>
 
         <div className="mb-5 flex h-1.5 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/[0.06]">
-          {(source === "all" ? overview.sources : overview.sources.slice(0, 1)).map((item, index) => (
+          {(source === "all"
+            ? overview.sources
+            : overview.sources.slice(0, 1)
+          ).map((item, index) => (
             <span
               key={item.source}
               className="usage-segment"
@@ -245,7 +318,9 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
               </h2>
             </div>
             <span className="text-[11px] text-[#8b8680] dark:text-[#8f8f8f]">
-              {t("usage.cloudPromptCount", { count: visibleWordRecords.length })}
+              {t("usage.cloudPromptCount", {
+                count: visibleWordRecords.length,
+              })}
             </span>
           </div>
 
@@ -273,11 +348,7 @@ export default function UsageAnalytics({ activity, wordCloudRecords = [] }) {
           </div>
         </div>
 
-        <ContextBreakdown
-          breakdown={contextBreakdown}
-          source={source}
-          t={t}
-        />
+        <ContextBreakdown breakdown={contextBreakdown} source={source} t={t} />
 
         <ModelUsage
           usage={modelUsage}
@@ -318,7 +389,10 @@ function ModelUsage({ usage, showAll, onToggle, zh, t }) {
 
       <div>
         {visible.map((model) => (
-          <div key={model.model} className="border-b border-black/[0.055] py-1.5 last:border-b-0 dark:border-white/[0.065]">
+          <div
+            key={model.model}
+            className="border-b border-black/[0.055] py-1.5 last:border-b-0 dark:border-white/[0.065]"
+          >
             <div
               className={`grid items-baseline gap-x-3 text-xs ${
                 showCost
@@ -326,7 +400,10 @@ function ModelUsage({ usage, showAll, onToggle, zh, t }) {
                   : "grid-cols-[minmax(0,1fr)_auto_auto]"
               }`}
             >
-              <span className="truncate font-medium text-[#393633] dark:text-[#d4d4d4]" title={model.model}>
+              <span
+                className="truncate font-medium text-[#393633] dark:text-[#d4d4d4]"
+                title={model.model}
+              >
                 {modelName(model.model, zh)}
               </span>
               <span className="font-[JetBrains_Mono,ui-monospace,monospace] tabular-nums text-[#6b6560] dark:text-[#b0b0b0]">
@@ -340,7 +417,10 @@ function ModelUsage({ usage, showAll, onToggle, zh, t }) {
                 </span>
               )}
               <span className="w-[46px] text-right font-[JetBrains_Mono,ui-monospace,monospace] tabular-nums text-[#393633] dark:text-[#d4d4d4]">
-                {model.percent < 0.1 && model.percent > 0 ? "<0.1" : model.percent.toFixed(1)}%
+                {model.percent < 0.1 && model.percent > 0
+                  ? "<0.1"
+                  : model.percent.toFixed(1)}
+                %
               </span>
             </div>
             <div className="mt-1 h-[2px] overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/[0.07]">
@@ -399,11 +479,17 @@ function ContextBreakdown({ breakdown, source, t }) {
 
       <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#8b8680] dark:text-[#8f8f8f]">
         {breakdown.cacheHitRate > 0 && (
-          <span>{t("usage.cacheHit", { percent: Math.round(breakdown.cacheHitRate) })}</span>
+          <span>
+            {t("usage.cacheHit", {
+              percent: Math.round(breakdown.cacheHitRate),
+            })}
+          </span>
         )}
         <span>{t("usage.contextEvents", { count: breakdown.eventCount })}</span>
         {breakdown.toolCallCount > 0 && (
-          <span>{t("usage.toolCallCount", { count: breakdown.toolCallCount })}</span>
+          <span>
+            {t("usage.toolCallCount", { count: breakdown.toolCallCount })}
+          </span>
         )}
       </div>
 
@@ -421,7 +507,10 @@ function ContextBreakdown({ breakdown, source, t }) {
               }}
             />
             <span className="relative flex items-center gap-1.5 text-[#4b4743] dark:text-[#c8c8c8]">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: CONTEXT_COLORS[category.key] }} />
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: CONTEXT_COLORS[category.key] }}
+              />
               {t(`usage.context.${category.key}`)}
             </span>
             <span className="relative font-[JetBrains_Mono,ui-monospace,monospace] tabular-nums text-[#6b6560] dark:text-[#b0b0b0]">
@@ -439,7 +528,9 @@ function ContextBreakdown({ breakdown, source, t }) {
           {t("usage.methodology")}
         </summary>
         <p className="mb-0 mt-1.5 max-w-2xl leading-relaxed">
-          {source === "codex" ? t("usage.contextCodexNote") : t("usage.contextClaudeNote")}
+          {source === "codex"
+            ? t("usage.contextCodexNote")
+            : t("usage.contextClaudeNote")}
         </p>
       </details>
     </div>
@@ -452,7 +543,15 @@ function modelName(model, zh) {
   return model;
 }
 
-function UsageSourceCard({ source, percent, modelCount, selected, color, onClick, t }) {
+function UsageSourceCard({
+  source,
+  percent,
+  modelCount,
+  selected,
+  color,
+  onClick,
+  t,
+}) {
   const all = source === "all";
   return (
     <button
@@ -465,10 +564,21 @@ function UsageSourceCard({ source, percent, modelCount, selected, color, onClick
       }`}
     >
       <div className="flex items-center gap-2 text-xs font-semibold uppercase">
-        {all ? <span className="inline-flex h-[18px] w-[18px] items-center justify-center">◈</span> : <AgentIcon agent={source} size={18} />}
-        <span className="truncate">{all ? t("usage.all") : agentLabel(source)}</span>
+        {all ? (
+          <span className="inline-flex h-[18px] w-[18px] items-center justify-center">
+            ◈
+          </span>
+        ) : (
+          <AgentIcon agent={source} size={18} />
+        )}
+        <span className="truncate">
+          {all ? t("usage.all") : agentLabel(source)}
+        </span>
       </div>
-      <div className="mt-2 text-xl font-bold tabular-nums" style={!all ? { color } : undefined}>
+      <div
+        className="mt-2 text-xl font-bold tabular-nums"
+        style={!all ? { color } : undefined}
+      >
         {percent < 0.01 && percent > 0 ? "<0.01" : percent.toFixed(2)}%
       </div>
       <div className="mt-1 text-[11px] text-[#8b8680] dark:text-[#8f8f8f]">
@@ -501,7 +611,11 @@ function UsageTrend({ trend, sources, zh, t }) {
         ))}
         <div className="absolute inset-0 flex items-end gap-[2px] pt-2">
           {trend.map((bucket, bucketIndex) => (
-            <div key={`${bucket.key}-${bucket.total}`} className="flex h-full min-w-0 flex-1 flex-col justify-end" title={`${bucket.key}: ${bucket.total.toLocaleString()}`}>
+            <div
+              key={`${bucket.key}-${bucket.total}`}
+              className="flex h-full min-w-0 flex-1 flex-col justify-end"
+              title={`${bucket.key}: ${bucket.total.toLocaleString()}`}
+            >
               <div
                 className="usage-trend-bar flex w-full flex-col-reverse"
                 style={{
