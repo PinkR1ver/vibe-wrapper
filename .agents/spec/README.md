@@ -15,6 +15,7 @@ Last synchronized: 2026-08-16
 | Hosted Cloudflare Workers AI free roast | completed | `hosted-free-ai-roast.md` |
 | Reproducible launch promo video | completed | `promo-motion-video.md` |
 | OpenCode source adapter and word cloud | completed | `opencode-source-adapter.md` |
+| DeepSeek Harness source adapter and word cloud | completed | `dsh-word-cloud.md` |
 | npm release entrypoint | completed | `../memory/npm-release-entrypoint.md` |
 
 ## Historical foundation

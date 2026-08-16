@@ -19,7 +19,7 @@ Prompt adapters return a report shaped like:
 }
 ```
 
-`src/sources/index.js` is the registry and default-source list. The default inspect covers Codex, Claude, Cursor, Cline, Roo, Continue, Gemini, Aider, Windsurf, Copilot, Amazon Q, Antigravity, and OpenCode. `vibe-tracker` is registered but not part of the default list.
+`src/sources/index.js` is the registry and default-source list. The default inspect covers Codex, Claude, Cursor, Cline, Roo, Continue, Gemini, Aider, Windsurf, Copilot, Amazon Q, Antigravity, OpenCode, and DeepSeek Harness. `vibe-tracker` is registered but not part of the default list.
 
 ## Reliability by source
 
@@ -37,6 +37,7 @@ Prompt adapters return a report shaped like:
 | Amazon Q | LokiJS chat-history JSON | Only prompt/user rows are profile input. |
 | Antigravity | plaintext JSON exports | Binary `.pb` conversations are skipped. |
 | OpenCode | SQLite `opencode.db` | Requires local `sqlite3`; prompt text extracted from `message` + `part` tables joined on user role and text type. Archived sessions excluded from token totals. |
+| DeepSeek Harness | `~/.dsh/sessions/**/session.jsonl[.zstd]` | zstd-compressed JSONL (concatenated frames); prompt text from `user/message` events with `source.kind === "user"`, injected envelopes excluded. Token totals stay TokenTracker-only. |
 | TokenTracker | append-only `queue.jsonl` | Activity-only; latest `(source, model, hour_start)` wins before daily aggregation. |
 | Vibe tracker | `~/.vibe-roast/sessions.jsonl` | Optional explicit-hook sink; its synthetic session summaries must not be mistaken for authored prompts. |
 
@@ -47,6 +48,7 @@ Prompt adapters return a report shaped like:
 - `report.activity.metric` is always `tokens`. When TokenTracker has rows in range, the heatmap/model breakdown use its daily totals.
 - Token activity distinguishes three rankings: `top_agent` comes from TokenTracker source totals (Cursor/Codex/etc.); `top_provider` is inferred from concrete model names (OpenAI/Anthropic/etc.); `top_model` is the highest-token concrete model. Generic `auto`/`unknown` model buckets count toward Agent totals but are excluded from Provider and Model rankings.
 - If TokenTracker cannot produce rows, Activity remains an empty Token dataset with `total_tokens: 0`; Prompt counts are not relabeled as Token usage.
+- DeepSeek Harness contributes authored prompts (word cloud, classification, scoring) from its local append-only session logs but returns empty `token_totals`; its token counts stay with TokenTracker activity. The adapter decompresses `.zstd` artifacts with Node 22.15+ built-in zstd or the `zstd` CLI; without either, DSH contributes zero prompts while TokenTracker activity is unaffected.
 - Date filters apply to both adapter prompts and TokenTracker buckets. Cursor rows without timestamps can appear in all-time prompt totals but cannot be placed on a day.
 - Codex/Claude context breakdown rows are attached to matching TokenTracker activity days. The UI rescales their category proportions to the authoritative TokenTracker source total for the selected time range.
 - Codex Messages/Tool calls attribution is heuristic: each non-overlapping turn delta goes to the distinct tools observed in that turn, or Messages when no tool was observed; reported reasoning tokens stay separate. Claude output is approximately distributed by merged text/thinking/tool-use content-block size, while message input/cache tokens remain Messages or the first-session System prompt.
