@@ -27,7 +27,10 @@ const {
   inspectAntigravity,
   extractAntigravityUserText,
 } = require("../src/sources/antigravity");
-const { inspectOpenCode } = require("../src/sources/opencode");
+const {
+  inspectOpenCode,
+  resolveOpenCodeDbPath,
+} = require("../src/sources/opencode");
 const { inspectSources } = require("../src/inspect");
 
 const fixtures = path.join(__dirname, "fixtures");
@@ -252,7 +255,7 @@ test("inspectOpenCode reads fixture opencode.db prompts and tokens", async () =>
   }
 
   // Token totals: only non-archived sessions in range
-  // ses_test001: input=15000 cache_read=8000 output=3000 reasoning=500 total=26500
+  // ses_test001: input=15000 cache_read=8000 cache_write=1000 output=3000 reasoning=500 total=27500
   assert.ok(report.token_totals.total_tokens > 0);
   assert.ok(report.token_totals.input_tokens > 0);
   assert.ok(report.token_totals.output_tokens > 0);
@@ -270,6 +273,24 @@ test("inspectOpenCode returns empty report for missing database", async () => {
   assert.equal(report.token_totals.total_tokens, 0);
   // Missing DB is silent (no noise for non-OpenCode users).
   assert.equal(report.notes.length, 0);
+});
+
+test("inspectOpenCode reports unreadable database with a note", async () => {
+  const bad = path.join(os.tmpdir(), "vibe-roast-opencode-unreadable.db");
+  fs.writeFileSync(bad, "this is not a sqlite database");
+
+  try {
+    const report = await inspectOpenCode({ root: bad });
+    assert.equal(report.source, "opencode");
+    assert.equal(report.prompt_count, 0);
+    assert.equal(report.files_scanned, 0);
+    assert.equal(report.token_totals.total_tokens, 0);
+    assert.ok(
+      report.notes.some((n) => n.includes("No readable OpenCode messages")),
+    );
+  } finally {
+    fs.unlinkSync(bad);
+  }
 });
 
 test("inspectOpenCode filters prompts by date range", async () => {
@@ -302,12 +323,40 @@ test("inspectOpenCode excludes archived sessions from token totals", async () =>
   // ses_test002 is archived (time_archived IS NOT NULL) — its tokens should NOT be counted
   // Only ses_test001's tokens should be in the totals
   assert.ok(report.token_totals.total_tokens > 0);
-  // ses_test001 expected: 15000 + 8000 + 0 + 3000 + 500 = 26500
-  assert.equal(report.token_totals.total_tokens, 26500);
+  // ses_test001 expected: 15000 + 8000 + 1000 + 3000 + 500 = 27500
+  assert.equal(report.token_totals.total_tokens, 27500);
+  assert.equal(report.token_totals.cache_creation_input_tokens, 1000);
 });
 
 test("inspectSources includes opencode as a known source", () => {
   const { KNOWN_SOURCES, DEFAULT_SOURCES } = require("../src/sources");
   assert.ok(KNOWN_SOURCES.includes("opencode"));
   assert.ok(DEFAULT_SOURCES.includes("opencode"));
+});
+
+test("resolveOpenCodeDbPath follows platform defaults", () => {
+  assert.match(
+    resolveOpenCodeDbPath({ home: "/Users/demo", platform: "darwin" }),
+    /Library\/Application Support\/opencode\/opencode\.db$/,
+  );
+  assert.match(
+    resolveOpenCodeDbPath({ home: "/home/demo", platform: "linux", env: {} }),
+    /\.local\/share\/opencode\/opencode\.db$/,
+  );
+  assert.equal(
+    resolveOpenCodeDbPath({
+      home: "/home/demo",
+      platform: "linux",
+      env: { XDG_DATA_HOME: "/custom/data" },
+    }),
+    "/custom/data/opencode/opencode.db",
+  );
+  assert.match(
+    resolveOpenCodeDbPath({
+      home: "C:\\Users\\demo",
+      platform: "win32",
+      env: { APPDATA: "C:\\Users\\demo\\AppData\\Roaming" },
+    }),
+    /opencode[\\/]opencode\.db$/,
+  );
 });
