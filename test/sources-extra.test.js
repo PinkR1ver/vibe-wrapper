@@ -226,13 +226,16 @@ test("inspectOpenCode reads fixture opencode.db prompts and tokens", async () =>
   });
 
   assert.equal(report.source, "opencode");
-  // Only session 1 (active) has 2 user messages; session 2 (archived) is excluded.
+  // Session 1 (active) has 2 real user prompts; its synthetic tool-executed part and session 2 (archived) are excluded.
   assert.equal(report.prompt_count, 2);
   assert.equal(report.files_scanned, 1);
 
   // Verify prompt texts are extracted
   assert.ok(report.prompts.some((p) => p.text.includes("词云组件")));
   assert.ok(report.prompts.some((p) => p.text.includes("animation")));
+
+  // Synthetic (app-generated) text parts must never count as authored prompts
+  assert.ok(!report.prompts.some((p) => p.text.includes("tool was executed")));
 
   // session_file uses opaque "opencode:slug" pattern (no filesystem path)
   assert.ok(

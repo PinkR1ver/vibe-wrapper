@@ -70,6 +70,7 @@ function readOpenCodePrompts(dbPath) {
   const clauses = [
     "json_extract(m.data, '$.role') = 'user'",
     "json_extract(p.data, '$.type') = 'text'",
+    "COALESCE(json_extract(p.data, '$.synthetic'), 0) = 0",
     "length(COALESCE(json_extract(p.data, '$.text'), '')) > 0",
     "json_valid(m.data)",
     "json_valid(p.data)",
@@ -119,7 +120,7 @@ function readOpenCodeTokenTotals(dbPath, range) {
       tokens_cache_write
     FROM session
     WHERE ${clauses.join("\n      AND ")}
-    ORDER BY time_created
+    ORDER BY time_created DESC
     LIMIT 50000
   `;
 
@@ -151,7 +152,7 @@ function readSqliteRows(dbPath, sql) {
       {
         encoding: "utf8",
         timeout: 10000,
-        maxBuffer: 32 * 1024 * 1024,
+        maxBuffer: 256 * 1024 * 1024,
         stdio: ["ignore", "pipe", "ignore"],
       },
     );
