@@ -5,7 +5,7 @@ const path = require("node:path");
 
 const { isInRange } = require("../lib/dates");
 const { normalizeWhitespace } = require("../extract/text");
-const { emptyTotals, number, addTotals, toIsoTimestamp } = require("./common");
+const { emptyTotals, number, toIsoTimestamp } = require("./common");
 
 function resolveOpenCodeDbPath({
   home = os.homedir(),
@@ -44,7 +44,7 @@ async function inspectOpenCode({ root, range } = {}) {
     };
   }
 
-  const allPrompts = readOpenCodePrompts(dbPath, range);
+  const allPrompts = readOpenCodePrompts(dbPath);
   const prompts = allPrompts.filter((p) => isInRange(p.timestamp, range));
   const tokenTotals = readOpenCodeTokenTotals(dbPath, range);
 
@@ -55,22 +55,18 @@ async function inspectOpenCode({ root, range } = {}) {
     prompt_count: prompts.length,
     token_totals: tokenTotals,
     prompts,
-    notes: buildNotes(allPrompts, prompts),
+    notes: buildNotes(allPrompts),
   };
 }
 
-function buildNotes(allPrompts, filteredPrompts) {
-  const notes = [];
-  if (filteredPrompts.some((p) => !p.timestamp)) {
-    notes.push(
-      "Some OpenCode prompts lack reliable timestamps; date-filtered views may omit them.",
-    );
-  }
-  return notes;
+function buildNotes(allPrompts) {
+  if (allPrompts.length > 0) return [];
+  return [
+    "No readable OpenCode messages found. Install sqlite3 or pass --opencode-root to a readable opencode.db.",
+  ];
 }
 
-function readOpenCodePrompts(dbPath, range) {
-  const { fromMs, toMs } = range || {};
+function readOpenCodePrompts(dbPath) {
   const clauses = [
     "json_extract(m.data, '$.role') = 'user'",
     "json_extract(p.data, '$.type') = 'text'",
@@ -79,8 +75,6 @@ function readOpenCodePrompts(dbPath, range) {
     "json_valid(p.data)",
     "s.time_archived IS NULL",
   ];
-  if (fromMs != null) clauses.push(`m.time_created >= ${fromMs}`);
-  if (toMs != null) clauses.push(`m.time_created <= ${toMs}`);
 
   const sql = `
     SELECT
