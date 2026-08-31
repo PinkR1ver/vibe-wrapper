@@ -62,7 +62,7 @@
     "access": "public"
   },
   "dependencies": {
-    "tokentracker-cli": "^0.87.8"
+    "tokentracker-cli": "^0.93.7"
   },
   "license": "MIT",
   "devDependencies": {
